@@ -1,0 +1,89 @@
+//! Volcado textual de la IR (para tests, depuracion y `pypic ir`).
+
+use std::fmt::Write;
+
+use crate::ir::*;
+
+fn place(m: &Module, f: &Function, p: Place) -> String {
+    match p {
+        Place::Temp(i) => format!("%t{i}"),
+        Place::Local(i) => f.locals[i as usize].name.clone(),
+        Place::Global(i) => format!("@{}", m.globals[i as usize].name),
+    }
+}
+
+fn operand(m: &Module, f: &Function, o: &Operand) -> String {
+    match o {
+        Operand::Const { value, ty } => format!("{value}:{ty}"),
+        Operand::Place(p) => place(m, f, *p),
+    }
+}
+
+fn unary_sym(op: UnaryOp) -> &'static str {
+    match op {
+        UnaryOp::Neg => "neg",
+        UnaryOp::Invert => "inv",
+        UnaryOp::Not => "not",
+    }
+}
+
+pub fn print(m: &Module) -> String {
+    let mut out = String::new();
+    for g in &m.globals {
+        let kw = if g.is_const { "const" } else { "global" };
+        let _ = writeln!(out, "{kw} @{}: {} = {}", g.name, g.ty, g.init);
+    }
+    for f in &m.functions {
+        let params: Vec<String> = f.locals[..f.num_params].iter().map(|l| format!("{}: {}", l.name, l.ty)).collect();
+        let tag = if f.is_interrupt { "interrupt " } else { "" };
+        let _ = writeln!(out, "\n{tag}fn {}({}) -> {} {{", f.name, params.join(", "), f.ret);
+        let locals: Vec<String> = f.locals[f.num_params..].iter().map(|l| format!("{}: {}", l.name, l.ty)).collect();
+        if !locals.is_empty() {
+            let _ = writeln!(out, "  locals {}", locals.join(", "));
+        }
+        for (i, b) in f.blocks.iter().enumerate() {
+            let _ = writeln!(out, " bb{i}:");
+            for inst in &b.insts {
+                let line = match inst {
+                    Inst::Copy { dst, src } => format!("{} = {}", place(m, f, *dst), operand(m, f, src)),
+                    Inst::Unary { dst, op, src } => format!("{} = {} {}", place(m, f, *dst), unary_sym(*op), operand(m, f, src)),
+                    Inst::Binary { dst, op, lhs, rhs } => format!(
+                        "{}: {} = {} {} {}",
+                        place(m, f, *dst),
+                        m.place_ty(f, *dst),
+                        operand(m, f, lhs),
+                        op.symbol(),
+                        operand(m, f, rhs)
+                    ),
+                    Inst::Compare { dst, op, lhs, rhs } => {
+                        format!("{} = {} {} {}", place(m, f, *dst), operand(m, f, lhs), op.symbol(), operand(m, f, rhs))
+                    }
+                    Inst::Cast { dst, src } => {
+                        format!("{}: {} = cast {}", place(m, f, *dst), m.place_ty(f, *dst), operand(m, f, src))
+                    }
+                    Inst::Call { dst, func, args } => {
+                        let a: Vec<String> = args.iter().map(|o| operand(m, f, o)).collect();
+                        let call = format!("call {}({})", m.functions.get(*func).map_or("?", |x| x.name.as_str()), a.join(", "));
+                        match dst {
+                            Some(d) => format!("{} = {call}", place(m, f, *d)),
+                            None => call,
+                        }
+                    }
+                };
+                let _ = writeln!(out, "    {line}");
+            }
+            let t = match &b.term {
+                Terminator::Jump(t) => format!("jump bb{t}"),
+                Terminator::Branch { cond, then_bb, else_bb } => {
+                    format!("branch {} ? bb{then_bb} : bb{else_bb}", operand(m, f, cond))
+                }
+                Terminator::Return(Some(o)) => format!("return {}", operand(m, f, o)),
+                Terminator::Return(None) => "return".to_string(),
+                Terminator::Unreachable => "unreachable".to_string(),
+            };
+            let _ = writeln!(out, "    {t}");
+        }
+        out.push_str("}\n");
+    }
+    out
+}

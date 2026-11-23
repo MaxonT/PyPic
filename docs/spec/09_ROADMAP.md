@@ -1,0 +1,7 @@
+# Roadmap, pruebas y criterios de aceptación
+
+Roadmap tentativo (versiones de planificación, no fechas): 1.0 compilador PIC14 nativo, HEX, GPIO, CLI, ASM; 1.2 Device Packs y validación de compatibilidad/pinout; 1.5 simulador CPU, DAP y VS Code; 1.7 periféricos, librerías, monitor serial, I²C Scanner, memoria; 2.0 PIC12F625, toolchains externos y Wizard; 2.1 bloques visuales; 2.5 componentes simulados, analizador lógico, debugging avanzado; 3.0 más familias, gestor comunitario. Dependencias reales pueden exigir reordenar hitos.
+
+MVP verificable: compilar blink PIC16F887 a HEX sin XC8; ejecutar firmware en hardware real; validar bytes HEX y config words; mostrar errores de pines/periféricos; tests de operaciones aritméticas, saltos, bank switching, ISR; comparar ejecución con ensamblador de referencia. Integración continua con golden tests, pruebas de ISA, regresión de parser, dispositivo, backend y simulador. Para transpilación C, comparar resultados observables y reportar diferencias.
+
+Riesgos: complejidad de linker/assembler, variantes de CPU, limitaciones de pila y bancos, fidelidad de simulación periférica, licencias de metadatos DFP, disponibilidad de programación/debug en hardware, mantenimiento de múltiples toolchains. Mitigar con especificaciones pequeñas, pruebas de hardware, compatibilidad declarada y contribuciones por módulos.

@@ -1,0 +1,12 @@
+[package]
+name = "pypic-cli"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "pypic"
+path = "src/main.rs"
+
+[dependencies]
+pypic-frontend = { path = "../pypic-frontend" }
+pypic-ir = { path = "../pypic-ir" }

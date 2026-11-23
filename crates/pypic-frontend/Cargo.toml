@@ -1,0 +1,7 @@
+[package]
+name = "pypic-frontend"
+version.workspace = true
+edition.workspace = true
+description = "PyPIC compiler frontend: lexer, parser, subset validation and type checking (host-side only)"
+
+[dependencies]
